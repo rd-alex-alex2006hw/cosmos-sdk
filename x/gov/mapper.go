@@ -17,6 +17,9 @@ type governanceMapper struct {
 	// The (unexposed) key used to access the store from the Context.
 	votesStoreKey sdk.StoreKey
 
+	// The (unexposed) key used to access the store from the Context.
+	proposalProcessingQueueStoreKey sdk.StoreKey
+
 	// The wire codec for binary encoding/decoding of accounts.
 	cdc *wire.Codec
 }
@@ -126,4 +129,99 @@ func (gm governanceMapper) SetVote(ctx sdk.Context, vote Vote) {
 	}
 
 	store.Set(proposalId, bz)
+}
+
+type proposalQueueInfo struct {
+	// begin <= elems < end
+	begin int64
+	end   int64
+}
+
+func (info proposalQueueInfo) validateBasic() error {
+	if info.end < info.begin || info.begin < 0 || info.end < 0 {
+		return errors.New("")
+	}
+	return nil
+}
+
+func (info proposalQueueInfo) isEmpty() bool {
+	return begin == end
+}
+
+type proposalQueueElem int64
+
+const proposalQueueInfoKey = int64(-1)
+
+func (gm governanceMapper) getProposalInfo(store sdk.KVStore) proposalQueueInfo {
+	bz := store.Get(proposalQueueInfoKey)
+	info := proposalQueueInfo{}
+	if err := gm.cdc.UnmarshalBinary(bz, &info); err != nil {
+		panic(err)
+	}
+	if err = info.ValidateBasic(); err != nil {
+		panic(err)
+	}
+	return info
+}
+
+func (gm governanceMapper) setProposalInfo(store sdk.KVStore, info proposalQueueInfo) {
+	bz, err := gm.cdc.MarshalBinary(info)
+	if err != nil {
+		panic(err)
+	}
+	store.Set(proposalQueueInfoKey, bz)
+}
+
+func (gm governanceMapper) getProposalElem(store sdk.KVStore, index int64) int64 {
+	return store.Get(index)
+}
+
+func (gm governanceMapper) setProposalElem(store sdk.KVStore, index int64, elem int64) {
+	store.Set(index, elem)
+}
+
+func (gm governanceMapper) PeekProposalQueue(ctx sdk.Context) *int64 {
+	store := ctx.KVStore(gm.proposalProcessingQueueStoreKey)
+
+	info := gm.getProposalInfo(store)
+	if info.isEmpty() {
+		return nil
+	}
+
+	elem := gm.getProposalElem(store, info.begin)
+	return &elem
+}
+
+func (gm governanceMapper) PushProposalQueue(ctx sdk.Context, proposalId int64) {
+	store := ctx.KVStore(gm.proposalProcessingQueueStoreKey)
+
+	info := getProposalInfo(store)
+	setProposalElem(store, info.end, proposalId)
+
+	info.end++
+	gm.setProposalElem(store, info.end, proposalId)
+}
+
+func (gm governanceMapper) PopProposalQueue(ctx sdk.Context) {
+	store := ctx.KVStore(gm.proposalProcessingQueueStoreKey)
+
+	info := getProposalInfo(store)
+	if info.isEmpty() {
+		panic(errors.New(""))
+	}
+
+	store.Delete(info.begin)
+
+	info.begin++
+	gm.setProposalInfo(store, info)
+}
+
+// re-exporting github.com/cosmos/cosmos-sdk/x/bank/mapper.go
+
+func (gm governanceMapper) SubtractCoins(ctx sdk.Context, addr crypto.Address, amt sdk.Coins) (sdk.Coins, sdk.Error) {
+	return gm.ck.SubtractCoins(ctx, addr, amt)
+}
+
+func (gm governanceMapper) AddCoins(ctx sdk.Context, addr crypto.Address, amt sdk.Coins) (sdk.Coins, sdk.Error) {
+	return gm.ck.AddCoins(ctx, addr, amt)
 }

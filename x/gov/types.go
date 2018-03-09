@@ -8,6 +8,13 @@ type Vote struct {
 	ValidatorPubKey crypto.PubKey `json:"validator_pub_key"` //  PubKey of the validator voter wants to tie its vote to
 }
 
+type Votes struct {
+	YesVotes        int64
+	NoVotes         int64
+	NoWithVetoVotes int64
+	AbstainVotes    int64
+}
+
 //-----------------------------------------------------------
 
 // Proposal
@@ -23,6 +30,8 @@ type Proposal struct {
 	VotingStartBlock     int64 `json:"voting_start_block"`      //  Height of the block where MinDeposit was reached. -1 if MinDeposit is not reached
 	InitTotalVotingPower int64 `json:"init_total_voting_power"` //  Total voting power when proposal enters voting period (default 0)
 	InitProcedure        int16 `json:"init_procedure"`          //  Procedure number of the active procedure when proposal enters voting period (default -1)
+
+	Votes Votes
 }
 
 // Procedure
