@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -18,7 +20,7 @@ const (
 )
 
 func IBCRelayCmd(cdc *wire.Codec) *cobra.Command {
-	cmdr := commander{cdc}
+	cmdr := commander{cdc, "ingress", "egress"}
 
 	cmd := &cobra.Command{
 		Use:  "relay",
@@ -30,8 +32,10 @@ func IBCRelayCmd(cdc *wire.Codec) *cobra.Command {
 }
 
 type commander struct {
-	cdc       *wire.Codec
-	storeName string
+	cdc          *wire.Codec
+	keybase      keys.KeyBase
+	ingressStore string
+	egressStore  string
 }
 
 func (c commander) runIBCRelay(cmd *cobra.Command, args []string) error {
@@ -46,22 +50,75 @@ func (c commander) runIBCRelay(cmd *cobra.Command, args []string) error {
 	node1 := rpcclient.NewHTTP(chain1, "/websocket")
 	node2 := rpcclient.NewHTTP(chain2, "/websocket")
 
-	go loop(keybase, node1, node2)
-	go loop(keybase, node2, node1)
+	go loop(keybase, chain1, chain2, node1, node2)
+	go loop(keybase, chain2, chain1, node2, node1)
 }
 
 // https://github.com/cosmos/cosmos-sdk/blob/master/client/helpers.go using specified address
 
-func (c commander) loop(keybase keys.Keybase, from, to rpcclient.Client) {
-	key := -1
+func (c commander) refine(bz []byte) []byte {
+	var transfer ibc.IBCTransfer
+	if err = c.cdc.UnmarshalBinary(bz, &transfer); err != nil {
+		panic(err)
+	}
+	msg := ibc.IBCInMsg{
+		transfer,
+	}
+	res, err := buildTx(c.cdc, mssg)
+	if err != nil {
+		panic(err)
+	}
+	return res
+}
 
-	nextSeq := 0
+func (c commander) loop(keybase keys.Keybase, fromID, toID string, fromNode, toNode rpcclient.Client) {
+	egressLengthKey, err := c.cdc.MarshalBinary(ibc.EgressKey{toID, -1})
+	if err != nil {
+		panic(err)
+	}
 
+	ingressKey, err := c.cdc.MarshalBbinary(ibc.IngressKey{fromID})
+	if err != nil {
+		panic(err)
+	}
+
+	processed, err := c.query(to, ingressKey, c.ingressName)
+	if err != nil {
+		panic(err)
+	}
+
+OUTER:
 	for {
 		time.Sleep(time.Second)
 
-		key := nextSeq
-		res, err := c.query(from, key, c.storeName)
+		egressLength, err := c.query(from, lengthKey, c.egressName)
+		if err != nil {
+			fmt.Printf("Error querying outgoing msg list length: '%s'\n", err)
+			continue OUTER
+		}
+
+		for i := processed; i < egressLength; i++ {
+			egressKey, err := c.query(from, EgressKey{toID, i}, c.egressName)
+			if err != nil {
+				panic(err)
+			}
+
+			bz, err := c.query(from, egressKey, c.egressName)
+			if err != nil {
+				fmt.Printf("Error querying outgoing msg: '%s'\n", err)
+				continue OUTER
+			}
+
+			_, err := c.broadcastTx(to, c.refine(bz))
+			if err != nil {
+				fmt.Printf("Error broadcasting incoming msg: '%s'\n", err)
+				continue OUTER
+			}
+
+			fmt.Printf("Relayed msg: %d\n", i)
+		}
+
+		processed = egressLength
 	}
 }
 
@@ -107,26 +164,4 @@ func (c commander) buildTx() ([]byte, error) {
 		return nil, err
 	}
 	return txBytes, nil
-}
-
-func buildMsg(from crypto.Address) (sdk.Msg, error) {
-	amount := viper.GetString(flagAmount)
-	coins, err := sdk.ParseCoins(amount)
-	if err != nil {
-		return nil, err
-	}
-
-	dest := viper.GetString(flagTo)
-	bz, err := hex.DecodeString(dest)
-	if err != nil {
-		return nil, err
-	}
-	to := crypto.Address(bz)
-
-	msg := ibc.IBCOutMsg{
-		Destination: dest,
-		Coins:       coins,
-	}
-
-	return msg, nil
 }

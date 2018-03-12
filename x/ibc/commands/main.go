@@ -1,4 +1,6 @@
-package main
+package commands
+
+// testing purpose?
 
 import (
 	"fmt"
