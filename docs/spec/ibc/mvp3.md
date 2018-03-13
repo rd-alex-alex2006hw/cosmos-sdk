@@ -1,8 +1,8 @@
 # IBC Spec
 
-## MVP2
+## MVP3
 
-`IBCUpdate` is added, making it able to prove the header.
+`IBCOpen` is added to open the connection between two chains. Also, `IBCUpdate` is added, making it able to prove the header.
 
 ### IBC Module
 

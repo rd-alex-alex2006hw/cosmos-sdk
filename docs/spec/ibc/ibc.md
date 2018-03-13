@@ -1,55 +1,21 @@
-# IBC Spec
+# IBC Specification
 
-*This is a living document and should be edited as the IBC spec and implementation change*
+IBC(Inter-Blockchain Communication) protocol is used by multiple zones on Cosmos. Using IBC, the zones can send coins or arbitrary data to other zones.
 
-## MVP1
+## MVP Specifications
 
-The initial implementation of IBC will include just enough for simple coin transfers between chains, with safety features such as ACK messages being added later.
+### [MVP1](./mvp1.md)
 
-### IBC Module
+MVP1 will contain the basic functionalities, including packet generation and packet receivement. There will be no security check for incoming packets.
 
-```golang
-type IBCOutMsg struct {
-    IBCTransfer
-}
+### [MVP2](./mvp2.md)
 
-type IBCInMsg struct {
-    IBCTransfer
-}
+IBC module will be more modular in MVP2. Indivisual modules can register custom handlers to IBC module.
 
-type IBCTransfer struct {
-    Destination sdk.Address
-    Coins       sdk.Coins
-}
+### [MVP3](./mvp3.md)
 
-type IBCMapper struct {
-    ingressKey sdk.StoreKey // Source Chain ID            => last income msg's sequence
-    egressKey  sdk.StoreKey // (Dest chain ID, Msg index) => length / indexed msg
-}
+Light client verification is added to verify the message from the other chain. Registering chains with their ROT(Root Of Trust) is needed.
 
-type IngressKey struct {
-    SourceChain string
-}
+### [MVP4](./mvp4.md)
 
-type EgressKey struct {
-    DestChain   string
-    Index       int64
-}
-
-```
-
-`egressKey` stores the outgoing `IBCTransfer`s as a list. Its getter takes an `EgressKey` and returns the length if `egressKey.Index == -1`, an element if `egressKey.Index > 0`.
-
-`ingressKey` stores the last income `IBCTransfer`'s sequence. Its getter takes an `IngressKey`.
-
-## Relayer
-
-**Packets**
-- Connect to 2 Tendermint RPC endpoints
-- Query for IBC outgoing `IBCOutMsg` queue (can poll on a certain time interval, or check after each new block, etc)
-- For any new `IBCOutMsg`, build `IBCInMsg` and post to destination chain
-
-## CLI
-
-- Load relay process
-- Execute `IBCOutMsg`
+ACK verification and messaging queue is implemented to make it failsafe. Modules will register callback to handle failure when they register handlers.
