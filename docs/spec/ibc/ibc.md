@@ -10,16 +10,16 @@ The initial implementation of IBC will include just enough for simple coin trans
 
 ```golang
 type IBCOutMsg struct {
-  IBCTransfer
+    IBCTransfer
 }
 
 type IBCInMsg struct {
-  IBCTransfer
+    IBCTransfer
 }
 
 type IBCTransfer struct {
-  Destination sdk.Address
-  Coins       sdk.Coins
+    Destination sdk.Address
+    Coins       sdk.Coins
 }
 
 type IBCMapper struct {

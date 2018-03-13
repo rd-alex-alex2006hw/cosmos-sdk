@@ -8,5 +8,3 @@ type IBCMapper struct {
 	ingressKey sdk.StoreKey
 	egressKey  sdk.StoreKey
 }
-
-func (ibcm IBCMapper) GetSequenceNumber

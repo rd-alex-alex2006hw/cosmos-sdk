@@ -2,6 +2,8 @@ package commands
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	wire "github.com/cosmos/cosmos-sdk/wire"
 )
 
 func buildTx(cdc *wire.Codec, msg sdk.Msg) ([]byte, error) {

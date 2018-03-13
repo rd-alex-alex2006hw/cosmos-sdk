@@ -9,13 +9,14 @@
 ```golang
 type IBCOutMsg struct {
   IBCTransfer
+  DestChainID string
 }
 
 type IBCInMsg struct {
   IBCTransfer
-  Proof           merkle.IAVLProof
-  FromChainID     string
-  FromChainHeight uint64
+  Proof             merkle.IAVLProof
+  SourceChainID     string
+  SourceChainHeight uint64
 }
 
 // update sync state of other blockchain

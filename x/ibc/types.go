@@ -2,24 +2,18 @@ package ibc
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	tm "github.com/tendermint/tendermint/types"
+	//	tm "github.com/tendermint/tendermint/types"
 )
 
-type RegisterChainMsg struct {
+type IBCOutMsg struct {
+	IBCTransfer
 }
 
-type UpdateChainMsg struct {
-	Header tm.Header
-	Commit tm.Commit
+type IBCInMsg struct {
+	IBCTransfer
 }
 
-type PacketCreateMsg struct {
-	Packet
-}
-
-type PacketPostMsg struct {
-	FromChainID     string
-	FromChainHeight uint64
-	Packet
-	Proof *merkle.IAVLProof
+type IBCTransfer struct {
+	Destination sdk.Address
+	Coins       sdk.Coins
 }

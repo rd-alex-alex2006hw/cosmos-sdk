@@ -47,14 +47,27 @@ func (c commander) runIBCRelay(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	node1 := rpcclient.NewHTTP(chain1, "/websocket")
-	node2 := rpcclient.NewHTTP(chain2, "/websocket")
-
-	go loop(keybase, chain1, chain2, node1, node2)
-	go loop(keybase, chain2, chain1, node2, node1)
+	go loop(keybase, chain1, chain2)
+	go loop(keybase, chain2, chain1)
 }
 
 // https://github.com/cosmos/cosmos-sdk/blob/master/client/helpers.go using specified address
+
+func query(fromID string, key []byte, storeName string) (res []byte, err error) {
+	orig := viper.GetSstring(client.FlagNode)
+	viper.Set(client.FlagNode, fromID)
+	res, err := client.Query(key, storeName)
+	viper.Set(client.FlagNode, orig)
+	return res, err
+}
+
+func broadcastTx(toID string, tx []byte) (*ctypes.ResultBroadcastTxCommit, error) {
+	orig := viper.GetSstring(client.FlagNode)
+	viper.Set(client.FlagNode, toID)
+	res, err := client.BroadcastTx(tx)
+	viper.Set(client.FlagNode, orig)
+	return res, err
+}
 
 func (c commander) refine(bz []byte) []byte {
 	var transfer ibc.IBCTransfer
@@ -71,8 +84,8 @@ func (c commander) refine(bz []byte) []byte {
 	return res
 }
 
-func (c commander) loop(keybase keys.Keybase, fromID, toID string, fromNode, toNode rpcclient.Client) {
-	egressLengthKey, err := c.cdc.MarshalBinary(ibc.EgressKey{toID, -1})
+func (c commander) loop(keybase keys.Keybase, fromID, toID string) {
+	egressLengthKey, err := c.cdc.MarshalBinary(ibc.EgressKey(-1))
 	if err != nil {
 		panic(err)
 	}
@@ -91,25 +104,25 @@ OUTER:
 	for {
 		time.Sleep(time.Second)
 
-		egressLength, err := c.query(from, lengthKey, c.egressName)
+		egressLength, err := c.query(fromNode, lengthKey, c.egressName)
 		if err != nil {
 			fmt.Printf("Error querying outgoing msg list length: '%s'\n", err)
 			continue OUTER
 		}
 
 		for i := processed; i < egressLength; i++ {
-			egressKey, err := c.query(from, EgressKey{toID, i}, c.egressName)
+			egressKey, err := c.query(from, EgressKey(i), c.egressName)
 			if err != nil {
 				panic(err)
 			}
 
-			bz, err := c.query(from, egressKey, c.egressName)
+			bz, err := c.query(fromNode, egressKey, c.egressName)
 			if err != nil {
 				fmt.Printf("Error querying outgoing msg: '%s'\n", err)
 				continue OUTER
 			}
 
-			_, err := c.broadcastTx(to, c.refine(bz))
+			_, err := c.broadcastTx(toNode, c.refine(bz))
 			if err != nil {
 				fmt.Printf("Error broadcasting incoming msg: '%s'\n", err)
 				continue OUTER
