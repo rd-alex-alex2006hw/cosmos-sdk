@@ -10,11 +10,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/ibc"
 )
 
-const (
-	flagTo     = "to"
-	flagAmount = "amount"
-)
-
 func IBCTransferCmd(cdc *wire.Codec) *cobra.Command {
 	cmdr := commander{cdc}
 

@@ -7,16 +7,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 
+	"github.com/tendermint/go-crypto/keys"
 	wire "github.com/tendermint/go-wire"
 
 	"github.com/cosmos/cosmos-sdk/x/ibc"
-)
-
-const (
-	flagTo     = "to"
-	flagAmount = "amount"
-	flagChain1 = "chain1"
-	flagChain2 = "chain2"
 )
 
 func IBCRelayCmd(cdc *wire.Codec) *cobra.Command {
@@ -33,7 +27,7 @@ func IBCRelayCmd(cdc *wire.Codec) *cobra.Command {
 
 type commander struct {
 	cdc          *wire.Codec
-	keybase      keys.KeyBase
+	keybase      keys.Keybase
 	ingressStore string
 	egressStore  string
 }
@@ -56,7 +50,7 @@ func (c commander) runIBCRelay(cmd *cobra.Command, args []string) error {
 func query(fromID string, key []byte, storeName string) (res []byte, err error) {
 	orig := viper.GetSstring(client.FlagNode)
 	viper.Set(client.FlagNode, fromID)
-	res, err := client.Query(key, storeName)
+	res, err = client.Query(key, storeName)
 	viper.Set(client.FlagNode, orig)
 	return res, err
 }
@@ -122,7 +116,7 @@ OUTER:
 				continue OUTER
 			}
 
-			_, err := c.broadcastTx(toNode, c.refine(bz))
+			_, err = c.broadcastTx(toNode, c.refine(bz))
 			if err != nil {
 				fmt.Printf("Error broadcasting incoming msg: '%s'\n", err)
 				continue OUTER
