@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 
 	abci "github.com/tendermint/abci/types"
 	oldwire "github.com/tendermint/go-wire"
@@ -97,7 +98,7 @@ func MakeCodec() *wire.Codec {
 	const msgTypeIBCReceiveMsg = 0x6
 	const msgTypeBondMsg = 0x7
 	const msgTypeUnbondMsg = 0x8
-	const msgTypeEthTxMsg = 0x9
+	const msgTypeRawEthTxMsg = 0x9
 	var _ = oldwire.RegisterInterface(
 		struct{ sdk.Msg }{},
 		oldwire.ConcreteType{bank.SendMsg{}, msgTypeSend},
@@ -108,7 +109,7 @@ func MakeCodec() *wire.Codec {
 		oldwire.ConcreteType{ibc.IBCReceiveMsg{}, msgTypeIBCReceiveMsg},
 		oldwire.ConcreteType{staking.BondMsg{}, msgTypeBondMsg},
 		oldwire.ConcreteType{staking.UnbondMsg{}, msgTypeUnbondMsg},
-		oldwire.ConcreteType{eth.TxMsg{}, msgTypeEthTxMsg},
+		oldwire.ConcreteType{eth.RawTxMsg{}, msgTypeRawEthTxMsg},
 	)
 
 	const accTypeApp = 0x1
@@ -138,6 +139,13 @@ func (app *EthermintApp) txDecoder(txBytes []byte) (sdk.Tx, sdk.Error) {
 	err := app.cdc.UnmarshalBinary(txBytes, &tx)
 	if err != nil {
 		return nil, sdk.ErrTxDecode("").TraceCause(err, "")
+	}
+	if tx.GetMsg().Type() == eth.EthRawMsgType {
+		if ethrawtx, ok := tx.GetMsg().(eth.RawTxMsg); ok {
+			ethrawtx.DecodeRaw()
+		} else {
+			return nil, sdk.ErrTxDecode(fmt.Sprintf("tx is interpreted as EthRaw, but cannot be cast to apppropriate type: %x"))
+		}
 	}
 	return tx, nil
 }
