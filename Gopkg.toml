@@ -80,7 +80,10 @@
   branch = "rigel/cli-refactor"
   name = "github.com/tendermint/tmlibs"
 
+[[constraint]]
+  name = "github.com/ethereum/go-ethereum"
+  version = "1.8.2"
+
 [prune]
   go-tests = true
   unused-packages = true
-

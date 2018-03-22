@@ -26,6 +26,26 @@
   revision = "95f809107225be108efcf10a3509e4ea6ceef3c4"
 
 [[projects]]
+  name = "github.com/ethereum/go-ethereum"
+  packages = [
+    "common",
+    "common/hexutil",
+    "common/math",
+    "core/types",
+    "crypto",
+    "crypto/secp256k1",
+    "crypto/sha3",
+    "ethdb",
+    "log",
+    "metrics",
+    "params",
+    "rlp",
+    "trie"
+  ]
+  revision = "b8b9f7f4476a30a0aaf6077daade6ae77f969960"
+  version = "v1.8.2"
+
+[[projects]]
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
@@ -297,8 +317,8 @@
 [[projects]]
   name = "github.com/tendermint/iavl"
   packages = ["."]
-  revision = "669ff61054a14c4542dbd657ab438800d5630e45"
-  version = "v0.6.1"
+  revision = "fd37a0fa3a7454423233bc3d5ea828f38e0af787"
+  version = "v0.7.0"
 
 [[projects]]
   branch = "develop"
@@ -455,6 +475,12 @@
   version = "v1.10.0"
 
 [[projects]]
+  branch = "v2"
+  name = "gopkg.in/karalabe/cookiejar.v2"
+  packages = ["collections/prque"]
+  revision = "8dcd6a7f4951f6ff3ee9cbb919a06d8925822e57"
+
+[[projects]]
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   revision = "7f97868eec74b32b0982dd158a51a446d1da7eb5"
@@ -463,6 +489,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "64881873c2a0899c3d6920de588c06a2b59e6b072e1a3d7e676e906cb7d5ad0e"
+  inputs-digest = "57a35a0a6192ee319222e9f1a720637b453036d425aa80f17490592258591b10"
   solver-name = "gps-cdcl"
   solver-version = 1
