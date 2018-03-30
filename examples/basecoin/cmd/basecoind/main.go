@@ -21,8 +21,8 @@ import (
 // basecoindCmd is the entry point for this binary
 var (
 	basecoindCmd = &cobra.Command{
-		Use:   "gaiad",
-		Short: "Gaia Daemon (server)",
+		Use:   "basecoind",
+		Short: "Basecoin Daemon (server)",
 	}
 )
 
