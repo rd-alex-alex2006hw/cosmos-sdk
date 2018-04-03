@@ -3,6 +3,8 @@ package stake
 import (
 	"bytes"
 
+	abci "github.com/"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 )
@@ -301,4 +303,20 @@ func UnbondCoins(ctx sdk.Context, k Keeper, bond DelegatorBond, candidate Candid
 		return err
 	}
 	return nil
+}
+
+//_______________________________________________
+
+// NewEndBlocker generates sdk.EndBlocker
+// Performs tick functionality
+
+func NewEndBlocker(k Keeper) sdk.EndBlocker {
+	return func(ctx sdk.Context, req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
+		change, err := k.Tick(ctx)
+		if err != nil {
+			panic(err)
+		}
+		res.ValidatorUpdates = change
+		return
+	}
 }
