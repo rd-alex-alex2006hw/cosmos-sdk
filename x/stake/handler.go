@@ -3,7 +3,7 @@ package stake
 import (
 	"bytes"
 
-	abci "github.com/"
+	abci "github.com/tendermint/abci/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -316,7 +316,10 @@ func NewEndBlocker(k Keeper) sdk.EndBlocker {
 		if err != nil {
 			panic(err)
 		}
-		res.ValidatorUpdates = change
+		res.ValidatorUpdates = make([]abci.Validator, len(change))
+		for i, v := range change {
+			res.ValidatorUpdates[i] = *v
+		}
 		return
 	}
 }
