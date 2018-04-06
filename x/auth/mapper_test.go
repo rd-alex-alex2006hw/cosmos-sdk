@@ -34,7 +34,7 @@ func TestAccountMapperGetSet(t *testing.T) {
 	ms, capKey := setupMultiStore()
 
 	// make context and mapper
-	ctx := sdk.NewContext(ms, abci.Header{}, false, nil)
+	ctx := sdk.NewContext(ms, abci.Header{}, false, nil, sdk.CodespaceRoot)
 	mapper := NewAccountMapper(capKey, &BaseAccount{})
 
 	addr := sdk.Address([]byte("some-address"))
