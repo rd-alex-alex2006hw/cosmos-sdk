@@ -148,7 +148,7 @@ func TestSortGenesis(t *testing.T) {
 	// Note the order: the coins are unsorted!
 	coinDenom1, coinDenom2 := "foocoin", "barcoin"
 
-	genState := fmt.Sprintf(`{
+	str := `{
       "accounts": [{
         "address": "%s",
         "coins": [
@@ -162,7 +162,8 @@ func TestSortGenesis(t *testing.T) {
           }
         ]
       }]
-    }`, addr1.String(), coinDenom1, coinDenom2)
+    }`
+	genState := fmt.Sprintf(str, addr1.String(), coinDenom1, coinDenom2)
 
 	// Initialize the chain
 	vals := []abci.Validator{}
@@ -342,39 +343,6 @@ func TestSendMsgDependent(t *testing.T) {
 
 	// Check balances
 	CheckBalance(t, bapp, addr1, "42foocoin")
-}
-
-func TestQuizMsg(t *testing.T) {
-	bapp := newBasecoinApp()
-
-	// Construct genesis state
-	// Construct some genesis bytes to reflect basecoin/types/AppAccount
-	coins := sdk.Coins{}
-	baseAcc := auth.BaseAccount{
-		Address: addr1,
-		Coins:   coins,
-	}
-	acc1 := &types.AppAccount{baseAcc, "foobart"}
-
-	// Construct genesis state
-	genesisState := map[string]interface{}{
-		"accounts": []*types.GenesisAccount{
-			types.NewGenesisAccount(acc1),
-		},
-	}
-	stateBytes, err := json.MarshalIndent(genesisState, "", "\t")
-	require.Nil(t, err)
-
-	// Initialize the chain (nil)
-	vals := []abci.Validator{}
-	bapp.InitChain(abci.RequestInitChain{vals, stateBytes})
-	bapp.Commit()
-
-	// A checkTx context (true)
-	ctxCheck := bapp.BaseApp.NewContext(true, abci.Header{})
-	res1 := bapp.accountMapper.GetAccount(ctxCheck, addr1)
-	assert.Equal(t, acc1, res1)
-
 }
 
 func TestIBCMsgs(t *testing.T) {

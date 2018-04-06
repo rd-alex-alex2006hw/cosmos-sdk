@@ -21,7 +21,7 @@ type Keeper struct {
 	params Params
 }
 
-func NewKeeper(ctx sdk.Context, cdc *wire.Codec, key sdk.StoreKey, ck bank.CoinKeeper) Keeper {
+func NewKeeper(cdc *wire.Codec, key sdk.StoreKey, ck bank.CoinKeeper) Keeper {
 	keeper := Keeper{
 		storeKey:   key,
 		cdc:        cdc,

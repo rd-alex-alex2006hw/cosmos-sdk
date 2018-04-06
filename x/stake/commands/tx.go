@@ -19,8 +19,8 @@ import (
 
 // nolint
 const (
-	FlagAddressDelegator = "addressD"
-	FlagAddressCandidate = "addressC"
+	FlagAddressDelegator = "address-delegator"
+	FlagAddressCandidate = "address-candidate"
 	FlagPubKey           = "pubkey"
 	FlagAmount           = "amount"
 	FlagShares           = "shares"

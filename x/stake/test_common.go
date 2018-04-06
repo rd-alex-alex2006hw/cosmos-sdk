@@ -146,7 +146,7 @@ func createTestInput(t *testing.T, isCheckTx bool, initCoins int64) (sdk.Context
 		&auth.BaseAccount{}, // prototype
 	)
 	ck := bank.NewCoinKeeper(accountMapper)
-	keeper := NewKeeper(ctx, cdc, keyStake, ck)
+	keeper := NewKeeper(cdc, keyStake, ck)
 	keeper.setPool(ctx, initialPool())
 	keeper.setParams(ctx, defaultParams())
 
