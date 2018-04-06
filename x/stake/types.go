@@ -55,23 +55,25 @@ const (
 // exchange rate. Voting power can be calculated as total bonds multiplied by
 // exchange rate.
 type Candidate struct {
-	Status      CandidateStatus `json:"status"`      // Bonded status
-	Address     sdk.Address     `json:"owner"`       // Sender of BondTx - UnbondTx returns here
-	PubKey      crypto.PubKey   `json:"pub_key"`     // Pubkey of candidate
-	Assets      sdk.Rat         `json:"assets"`      // total shares of a global hold pools
-	Liabilities sdk.Rat         `json:"liabilities"` // total shares issued to a candidate's delegators
-	Description Description     `json:"description"` // Description terms for the candidate
+	Status          CandidateStatus `json:"status"`           // Bonded status
+	Address         sdk.Address     `json:"owner"`            // Sender of BondTx - UnbondTx returns here
+	PubKey          crypto.PubKey   `json:"pub_key"`          // Pubkey of candidate
+	Assets          sdk.Rat         `json:"assets"`           // total shares of a global hold pools
+	Liabilities     sdk.Rat         `json:"liabilities"`      // total shares issued to a candidate's delegators
+	Description     Description     `json:"description"`      // Description terms for the candidate
+	ValidatorHeight uint64          `json:"validator_height"` // If considered a validator, height when first considered a validator, else 0
 }
 
 // NewCandidate - initialize a new candidate
 func NewCandidate(address sdk.Address, pubKey crypto.PubKey, description Description) Candidate {
 	return Candidate{
-		Status:      Unbonded,
-		Address:     address,
-		PubKey:      pubKey,
-		Assets:      sdk.ZeroRat,
-		Liabilities: sdk.ZeroRat,
-		Description: description,
+		Status:          Unbonded,
+		Address:         address,
+		PubKey:          pubKey,
+		Assets:          sdk.ZeroRat,
+		Liabilities:     sdk.ZeroRat,
+		Description:     description,
+		ValidatorHeight: uint64(0),
 	}
 }
 
@@ -106,6 +108,7 @@ func (c Candidate) validator() Validator {
 	return Validator{
 		Address:     c.Address,
 		VotingPower: c.Assets,
+		Height:      c.ValidatorHeight,
 	}
 }
 
@@ -118,6 +121,7 @@ func (c Candidate) validator() Validator {
 type Validator struct {
 	Address     sdk.Address `json:"address"`      // Address of validator
 	VotingPower sdk.Rat     `json:"voting_power"` // Voting power if considered a validator
+	Height      uint64      `json:"height"`       // If considered a validator, height when first considered a validator, else 0
 }
 
 // ABCIValidator - Get the validator from a bond value
