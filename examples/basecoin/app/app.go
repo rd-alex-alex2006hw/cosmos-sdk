@@ -61,9 +61,9 @@ func NewBasecoinApp(logger log.Logger, dbs map[string]dbm.DB) *BasecoinApp {
 	ibcMapper := ibc.NewIBCMapper(app.cdc, app.capKeyIBCStore)
 	stakeKeeper := simplestake.NewKeeper(app.capKeyStakingStore, coinKeeper)
 	app.Router().
-		AddRoute("bank", bank.NewHandler(coinKeeper)).
-		AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
-		AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
+		AddRoute("bank", bank.NewHandler(coinKeeper), sdk.CodespaceRoot).
+		AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper), sdk.CodespaceRoot).
+		AddRoute("simplestake", simplestake.NewHandler(stakeKeeper), sdk.CodespaceRoot)
 
 	// initialize BaseApp
 	app.SetTxDecoder(app.txDecoder)
