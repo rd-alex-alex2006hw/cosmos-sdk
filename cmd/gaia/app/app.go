@@ -15,17 +15,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/ibc"
-	"github.com/cosmos/cosmos-sdk/x/simplestake"
-
-	"github.com/cosmos/cosmos-sdk/examples/basecoin/types"
+	"github.com/cosmos/cosmos-sdk/x/stake"
 )
 
 const (
-	appName = "BasecoinApp"
+	appName = "GaiaApp"
 )
 
 // Extended ABCI application
-type BasecoinApp struct {
+type GaiaApp struct {
 	*bam.BaseApp
 	cdc *wire.Codec
 
@@ -33,45 +31,47 @@ type BasecoinApp struct {
 	capKeyMainStore    *sdk.KVStoreKey
 	capKeyAccountStore *sdk.KVStoreKey
 	capKeyIBCStore     *sdk.KVStoreKey
-	capKeyStakingStore *sdk.KVStoreKey
+	capKeyStakeStore   *sdk.KVStoreKey
 
 	// Manage getting and setting accounts
 	accountMapper sdk.AccountMapper
 }
 
-func NewBasecoinApp(logger log.Logger, dbs map[string]dbm.DB) *BasecoinApp {
+func NewGaiaApp(logger log.Logger, dbs map[string]dbm.DB) *GaiaApp {
 	// create your application object
-	var app = &BasecoinApp{
+	var app = &GaiaApp{
 		BaseApp:            bam.NewBaseApp(appName, logger, dbs["main"]),
 		cdc:                MakeCodec(),
 		capKeyMainStore:    sdk.NewKVStoreKey("main"),
 		capKeyAccountStore: sdk.NewKVStoreKey("acc"),
 		capKeyIBCStore:     sdk.NewKVStoreKey("ibc"),
-		capKeyStakingStore: sdk.NewKVStoreKey("stake"),
+		capKeyStakeStore:   sdk.NewKVStoreKey("stake"),
 	}
 
 	// define the accountMapper
 	app.accountMapper = auth.NewAccountMapperSealed(
 		app.capKeyMainStore, // target store
-		&types.AppAccount{}, // prototype
+		&auth.BaseAccount{}, // prototype
 	)
 
 	// add handlers
 	coinKeeper := bank.NewCoinKeeper(app.accountMapper)
 	ibcMapper := ibc.NewIBCMapper(app.cdc, app.capKeyIBCStore)
-	stakeKeeper := simplestake.NewKeeper(app.capKeyStakingStore, coinKeeper)
+	stakeKeeper := stake.NewKeeper(app.cdc, app.capKeyStakeStore, coinKeeper)
 	app.Router().
 		AddRoute("bank", bank.NewHandler(coinKeeper)).
 		AddRoute("ibc", ibc.NewHandler(ibcMapper, coinKeeper)).
-		AddRoute("simplestake", simplestake.NewHandler(stakeKeeper))
+		AddRoute("stake", stake.NewHandler(stakeKeeper))
 
 	// initialize BaseApp
 	app.SetTxDecoder(app.txDecoder)
 	app.SetInitChainer(app.initChainer)
+	app.SetEndBlocker(stake.NewEndBlocker(stakeKeeper))
 	app.MountStoreWithDB(app.capKeyMainStore, sdk.StoreTypeIAVL, dbs["main"])
 	app.MountStoreWithDB(app.capKeyAccountStore, sdk.StoreTypeIAVL, dbs["acc"])
 	app.MountStoreWithDB(app.capKeyIBCStore, sdk.StoreTypeIAVL, dbs["ibc"])
-	app.MountStoreWithDB(app.capKeyStakingStore, sdk.StoreTypeIAVL, dbs["staking"])
+	app.MountStoreWithDB(app.capKeyStakeStore, sdk.StoreTypeIAVL, dbs["stake"])
+
 	// NOTE: Broken until #532 lands
 	//app.MountStoresIAVL(app.capKeyMainStore, app.capKeyIBCStore, app.capKeyStakingStore)
 	app.SetAnteHandler(auth.NewAnteHandler(app.accountMapper))
@@ -86,40 +86,44 @@ func NewBasecoinApp(logger log.Logger, dbs map[string]dbm.DB) *BasecoinApp {
 // custom tx codec
 // TODO: use new go-wire
 func MakeCodec() *wire.Codec {
-	const msgTypeSend = 0x1
-	const msgTypeIssue = 0x2
-	const msgTypeQuiz = 0x3
-	const msgTypeSetTrend = 0x4
-	const msgTypeIBCTransferMsg = 0x5
-	const msgTypeIBCReceiveMsg = 0x6
-	const msgTypeBondMsg = 0x7
-	const msgTypeUnbondMsg = 0x8
+	const (
+		msgTypeSend           = 0x1
+		msgTypeIssue          = 0x2
+		msgTypeIBCTransferMsg = 0x3
+		msgTypeIBCReceiveMsg  = 0x4
+		msgDeclareCandidacy   = 0x5
+		msgEditCandidacy      = 0x6
+		msgDelegate           = 0x7
+		msgUnbond             = 0x8
+	)
 	var _ = oldwire.RegisterInterface(
 		struct{ sdk.Msg }{},
 		oldwire.ConcreteType{bank.SendMsg{}, msgTypeSend},
 		oldwire.ConcreteType{bank.IssueMsg{}, msgTypeIssue},
 		oldwire.ConcreteType{ibc.IBCTransferMsg{}, msgTypeIBCTransferMsg},
 		oldwire.ConcreteType{ibc.IBCReceiveMsg{}, msgTypeIBCReceiveMsg},
-		oldwire.ConcreteType{simplestake.BondMsg{}, msgTypeBondMsg},
-		oldwire.ConcreteType{simplestake.UnbondMsg{}, msgTypeUnbondMsg},
+		oldwire.ConcreteType{stake.MsgDeclareCandidacy{}, msgDeclareCandidacy},
+		oldwire.ConcreteType{stake.MsgEditCandidacy{}, msgEditCandidacy},
+		oldwire.ConcreteType{stake.MsgDelegate{}, msgDelegate},
+		oldwire.ConcreteType{stake.MsgUnbond{}, msgUnbond},
 	)
 
 	const accTypeApp = 0x1
 	var _ = oldwire.RegisterInterface(
 		struct{ sdk.Account }{},
-		oldwire.ConcreteType{&types.AppAccount{}, accTypeApp},
+		oldwire.ConcreteType{&auth.BaseAccount{}, accTypeApp},
 	)
 	cdc := wire.NewCodec()
 
 	// cdc.RegisterInterface((*sdk.Msg)(nil), nil)
-	// bank.RegisterWire(cdc)   // Register bank.[SendMsg,IssueMsg] types.
-	// crypto.RegisterWire(cdc) // Register crypto.[PubKey,PrivKey,Signature] types.
-	// ibc.RegisterWire(cdc) // Register ibc.[IBCTransferMsg, IBCReceiveMsg] types.
+	// bank.RegisterWire(cdc)   // Register bank.[SendMsg,IssueMsg]
+	// crypto.RegisterWire(cdc) // Register crypto.[PubKey,PrivKey,Signature]
+	// ibc.RegisterWire(cdc) // Register ibc.[IBCTransferMsg, IBCReceiveMsg]
 	return cdc
 }
 
 // custom logic for transaction decoding
-func (app *BasecoinApp) txDecoder(txBytes []byte) (sdk.Tx, sdk.Error) {
+func (app *GaiaApp) txDecoder(txBytes []byte) (sdk.Tx, sdk.Error) {
 	var tx = sdk.StdTx{}
 
 	if len(txBytes) == 0 {
@@ -135,11 +139,11 @@ func (app *BasecoinApp) txDecoder(txBytes []byte) (sdk.Tx, sdk.Error) {
 	return tx, nil
 }
 
-// custom logic for basecoin initialization
-func (app *BasecoinApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+// custom logic for gaia initialization
+func (app *GaiaApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
 	stateJSON := req.AppStateBytes
 
-	genesisState := new(types.GenesisState)
+	genesisState := new(GenesisState)
 	err := json.Unmarshal(stateJSON, genesisState)
 	if err != nil {
 		panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
@@ -147,12 +151,8 @@ func (app *BasecoinApp) initChainer(ctx sdk.Context, req abci.RequestInitChain) 
 	}
 
 	for _, gacc := range genesisState.Accounts {
-		acc, err := gacc.ToAppAccount()
-		if err != nil {
-			panic(err) // TODO https://github.com/cosmos/cosmos-sdk/issues/468
-			//	return sdk.ErrGenesisParse("").TraceCause(err, "")
-		}
-		app.accountMapper.SetAccount(ctx, acc)
+		acc := gacc.ToAccount()
+		app.accountMapper.SetAccount(ctx, &acc)
 	}
 	return abci.ResponseInitChain{}
 }
